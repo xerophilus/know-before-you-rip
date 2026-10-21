@@ -12,7 +12,7 @@ Story: collectors submit evidence through the UI/API, reviewers validate it agai
 | Build and type checking | Passed | Next.js production build and TypeScript checks pass. |
 | HTTP pages | Passed without Supabase | `/`, `/chases`, `/evidence`, `/admin`, and the initial release return HTTP 200. |
 | Unconfigured API | Passed | POST `/api/evidence` returns 503 with `Evidence service is not configured yet`. |
-| Browser interaction / visual review | Partial | Pages render against the hosted dev project at desktop and 375px widths; no horizontal page scroll (the chase table scrolls inside its own container). Interactive password sign-in through the UI has not been automated. |
+| Browser interaction / visual review | Passed (dev) | Password sign-in, wrong-password error, evidence submission, out-of-range serial error, sign-out, non-reviewer denial on /admin, reviewer approve, and the public tracker update all exercised in the browser. Pages render at desktop and 375px widths with no horizontal page scroll. |
 | Hosted Supabase/Auth/PostgREST | Passed (dev) | Both migrations applied to `know-before-you-rip-dev`; RLS on all 12 tables; security advisor clean. Three-account smoke test (reviewer A, collectors B and C) passed 59/59 checks through the local API and Data API, using a synthetic checklist in a separate `synthetic-smoke-test` release. |
 | Official manufacturer dataset | Not imported | No source has been promoted from the original unvalidated preview. No production pull confirmations, prices or odds added. |
 | Live eBay | Not run | No authorized token supplied; discovery stays disabled. |
@@ -28,3 +28,11 @@ Run against localhost and the dev project with server-generated magic-link sessi
 - Counting: approve → 1; a second source for `3/25` → still 1; a rejected item contributes 0 and stays terminal; revoke one → 1, revoke both → 0; the unsighted copy is hidden; 5 audit events remain.
 - Rejections: `26/25`, `3/30`, unnumbered parallel, `11/10` via Data API (trigger), duplicate source (409), future observation, unauthenticated or bad token (401).
 - Role removal: A gets 403 after the `admin_roles` row is deleted and works again once it is restored. A signed-out session token gets 401.
+
+## Browser walkthrough — 2026-10-21
+
+Collector C signed in on `/evidence`, saw only their own history, submitted `12/25` (pending), and got a clear error for `30/25`. On `/admin`, C got "Reviewer access required". Reviewer A loaded the queue, approved with both confirmations and a reason, and `/chases` then showed `1 DOCUMENTED` with the evidence link and checklist provenance.
+
+Two UI defects found and fixed:
+- A non-reviewer on `/admin` saw their own submissions with review controls (the server still refused the action). The queue now loads only after reviewer access is confirmed.
+- supabase-js re-emits `SIGNED_IN` when the tab regains focus, which wiped the queue and any in-progress review, for example after opening the source in another tab. State now resets only when the signed-in user changes.

@@ -67,12 +67,14 @@ export default function EvidenceWorkspace({
     if (!url || !key) return;
     const client = createClient(url, key);
     setDb(client);
-    client.auth
-      .getSession()
-      .then(({ data }) => setToken(data.session?.access_token ?? ""));
+    // SIGNED_IN also fires when the tab regains focus; only reset on a user change.
+    let userId: string | undefined;
     const { data } = client.auth.onAuthStateChange((event, session) => {
       setToken(session?.access_token ?? "");
-      if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
+      const nextUserId = session?.user.id;
+      const changed = nextUserId !== userId;
+      userId = nextUserId;
+      if (event === "SIGNED_OUT" || (changed && event !== "INITIAL_SESSION")) {
         setEntries([]);
         setImports([]);
         setReviewId("");
@@ -104,8 +106,10 @@ export default function EvidenceWorkspace({
     return result;
   }
   async function refresh() {
+    // Confirm reviewer access before showing a review queue.
+    const nextImports = admin ? await api("/api/imports") : [];
     setEntries(await api("/api/evidence"));
-    if (admin) setImports(await api("/api/imports"));
+    setImports(nextImports);
   }
   async function run(fn: () => Promise<void>) {
     setBusy(true);
