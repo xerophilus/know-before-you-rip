@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 const admin = "00000000-0000-4000-8000-000000000001",
   user = "00000000-0000-4000-8000-000000000002",
   other = "00000000-0000-4000-8000-000000000003";
@@ -13,12 +13,8 @@ async function setup() {
  create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on all functions in schema auth to anon,authenticated,service_role;
  insert into auth.users values('${admin}'),('${user}'),('${other}');`);
-  await db.exec(
-    readFileSync(
-      "supabase/migrations/20261021145455_evidence_catalog.sql",
-      "utf8",
-    ),
-  );
+  for (const file of readdirSync("supabase/migrations").sort())
+    await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
   await db.query("insert into admin_roles values($1)", [admin]);
   const release = (await db.query<{ id: string }>("select id from releases"))
     .rows[0].id;

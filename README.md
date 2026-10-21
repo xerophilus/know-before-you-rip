@@ -25,7 +25,7 @@ Tests execute the migration and permission checks against embedded PostgreSQL (P
 ## Supabase setup
 
 1. Create a **new development Supabase project**. Never apply this initial migration over similarly named tables without first checking the schema.
-2. Apply `supabase/migrations/20261021145455_evidence_catalog.sql` in its SQL editor as one transaction (`BEGIN;` before the file, `COMMIT;` after it). Alternatively, initialize/link the pinned Supabase CLI, inspect `supabase db push --help`, and deploy the migration through your normal CLI migration process. Do not mix manual application and CLI history without reconciling migration history.
+2. Apply each file in `supabase/migrations/` in filename order in its SQL editor, each as one transaction (`BEGIN;` before the file, `COMMIT;` after it). Alternatively, initialize/link the pinned Supabase CLI, inspect `supabase db push --help`, and deploy the migration through your normal CLI migration process. Do not mix manual application and CLI history without reconciling migration history.
 3. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the **server-only** `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Restart/rebuild after changing public variables. The service key is never sent to the browser.
 4. In Supabase Auth create confirmed development email/password accounts (or invite users and complete their password setup). `/evidence` and `/admin` use password sign-in. Self-service registration/password recovery screens are outside this increment. Disable anonymous sign-in; the API and insert policy also reject anonymous sessions.
 5. Assign a reviewer explicitly in the SQL editor using the account's real UUID:
