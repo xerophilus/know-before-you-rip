@@ -9,3 +9,5 @@ node_modules
 source-archive/
 *.tsbuildinfo
 supabase/.temp/
+.vercel
+.env*.local
