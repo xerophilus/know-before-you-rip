@@ -5,6 +5,8 @@ import {
   failure,
   serviceDb,
   HttpError,
+  limits,
+  rateLimit,
 } from "@/lib/server/supabase";
 import { importInput, validateRows } from "@/lib/validation";
 export async function GET(request: Request) {
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user } = await authenticate(request, true);
+    await rateLimit(`imports:${user.id}`, limits.imports);
     const input = importInput.parse(await body(request, 4000000));
     validateRows(input.rows);
     const result = await serviceDb().rpc("stage_checklist", {
@@ -45,6 +48,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { user } = await authenticate(request, true);
+    await rateLimit(`imports:${user.id}`, limits.imports);
     const input = z
       .object({
         id: z.uuid(),

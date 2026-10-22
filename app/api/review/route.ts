@@ -5,6 +5,8 @@ import {
   failure,
   serviceDb,
   HttpError,
+  limits,
+  rateLimit,
 } from "@/lib/server/supabase";
 const review = z
   .object({
@@ -18,6 +20,7 @@ const review = z
 export async function POST(request: Request) {
   try {
     const { user } = await authenticate(request, true);
+    await rateLimit(`review:${user.id}`, limits.review);
     const input = review.parse(await body(request));
     if (
       input.decision === "approved" &&

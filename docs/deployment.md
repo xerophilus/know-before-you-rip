@@ -21,7 +21,7 @@
 
 - Deploy the Next.js project to the chosen host with separate development secrets. No host/project was selected in this increment.
 - Keep marketplace discovery disabled. Public environment variables must be supplied at build time; keep the service key server-only.
-- Restrict preview access and invite a small review group. Add shared rate limiting/abuse controls before allowing open registration. Confirm error logging contains no credentials or private notes.
+- Restrict preview access and invite a small review group. Shared per-IP and per-account API rate limits are in place (README, *Rate limits*); review Supabase Auth rate limits and add abuse controls such as CAPTCHA before allowing open registration. Confirm error logging contains no credentials or private notes.
 - Configure monitoring, source-archive persistence/backups and database backup/restore procedures. Assign an owner for evidence corrections and source takedown requests.
 
 ## 4. Verified product pilot

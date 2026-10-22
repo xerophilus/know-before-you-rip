@@ -37,6 +37,38 @@ export class HttpError extends Error {
     super(message);
   }
 }
+// Shared limits: [max requests, window in seconds]. Counters live in Postgres so
+// every server instance enforces the same totals.
+export const limits = {
+  ip: [120, 60],
+  evidence: [30, 3600],
+  review: [300, 3600],
+  imports: [20, 3600],
+  discovery: [30, 3600],
+  discoveryGlobal: [1000, 86400],
+} as const satisfies Record<string, readonly [number, number]>;
+export async function rateLimit(
+  bucket: string,
+  limit: readonly [number, number],
+) {
+  const { data, error } = await serviceDb().rpc("rate_limit_hit", {
+    p_bucket: bucket,
+    p_max: limit[0],
+    p_window_seconds: limit[1],
+  });
+  if (error) throw new Error("Rate limiter unavailable");
+  if (data !== true)
+    throw new HttpError(
+      429,
+      "Too many requests. Wait a few minutes and try again.",
+    );
+}
+// Vercel overwrites x-forwarded-for with the connecting client's address.
+export function clientIp(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  );
+}
 export async function authenticate(request: Request, admin = false) {
   if (!configured())
     throw new HttpError(503, "Evidence service is not configured yet");
@@ -44,6 +76,7 @@ export async function authenticate(request: Request, admin = false) {
     .get("authorization")
     ?.match(/^Bearer (.+)$/)?.[1];
   if (!token) throw new HttpError(401, "Sign in to continue");
+  await rateLimit(`ip:${clientIp(request)}`, limits.ip);
   const db = userDb(token);
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user || data.user.is_anonymous)

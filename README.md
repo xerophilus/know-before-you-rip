@@ -110,9 +110,23 @@ Unknown serials, unreadable stamps and unnumbered cards cannot establish a uniqu
 - Default `EBAY_ENVIRONMENT=sandbox`. Set `production` only after confirming your app's access and usage/display/retention obligations.
 - Enable discovery explicitly. Searches make one request for at most 20 candidates; timeout/rate-limit failures stop the request. No background polling, automatic retries, persistent listing cache, price history or automatic evidence approval is implemented.
 - Results are transient unreviewed candidates, with environment, provider ID, source URL, discovery time and optional **asking price**. Sandbox results are labeled. Manually verify real evidence before submission; never publish synthetic sandbox results.
-- Before scaling, add an account-aware shared rate limiter, token lifecycle management and a documented retention/deletion policy appropriate to approved API terms.
+- Discovery is limited to 30 searches per reviewer per hour and 1,000 per day across all reviewers (see *Rate limits*). Before scaling, add token lifecycle management and a documented retention/deletion policy appropriate to approved API terms.
 
 Reference: https://developer.ebay.com/develop/api/buy (Browse API and application tokens).
+
+## Rate limits
+
+Every API request is counted in Postgres (`public.rate_limits`, server-only), so limits hold across all server instances. Limits are set in `lib/server/supabase.ts`:
+
+| Bucket | Limit |
+| --- | --- |
+| Any API request with a bearer token, per client IP | 120 per minute |
+| Evidence submissions, per account | 30 per hour |
+| Review decisions, per reviewer | 300 per hour |
+| Checklist stage/publish, per reviewer | 20 per hour |
+| Marketplace discovery, per reviewer / all reviewers | 30 per hour / 1,000 per day |
+
+Exceeding a limit returns HTTP 429. If the limiter can't reach the database, requests fail closed with a 500. Password sign-in goes straight to Supabase Auth, so its brute-force protection comes from Supabase's own Auth rate limits (Authentication → Rate Limits in the dashboard), not from this table.
 
 ## Deployment and limitations
 

@@ -256,3 +256,33 @@ test("canonical identity across case/whitespace changes retains one parallel", a
     await db.close();
   }
 });
+test("shared rate limiter enforces windows and is server-only", async () => {
+  const { db } = await setup();
+  try {
+    await db.exec("set role service_role");
+    const hit = async (bucket = "ip:test") =>
+      (
+        await db.query<{ ok: boolean }>("select rate_limit_hit($1,2,60) ok", [
+          bucket,
+        ])
+      ).rows[0].ok;
+    assert.deepEqual(
+      [await hit(), await hit(), await hit()],
+      [true, true, false],
+    );
+    assert.equal(await hit("ip:other"), true, "buckets are independent");
+    await db.exec(
+      "update rate_limits set window_start=now()-interval '61 seconds' where bucket='ip:test'",
+    );
+    assert.equal(await hit(), true, "an expired window resets");
+    await db.exec("reset role");
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`set role ${role}`);
+      await assert.rejects(db.query("select rate_limit_hit('ip:x',100,60)"));
+      await assert.rejects(db.query("select * from rate_limits"));
+      await db.exec("reset role");
+    }
+  } finally {
+    await db.close();
+  }
+});

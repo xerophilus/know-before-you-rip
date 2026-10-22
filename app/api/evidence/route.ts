@@ -1,4 +1,11 @@
-import { authenticate, body, failure, HttpError } from "@/lib/server/supabase";
+import {
+  authenticate,
+  body,
+  failure,
+  HttpError,
+  limits,
+  rateLimit,
+} from "@/lib/server/supabase";
 import { evidenceInput, parseSerial } from "@/lib/validation";
 export async function GET(request: Request) {
   try {
@@ -19,6 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { db, user } = await authenticate(request);
+    await rateLimit(`evidence:${user.id}`, limits.evidence);
     const input = evidenceInput.parse(await body(request));
     const { data: parallel, error } = await db
       .from("parallels")
